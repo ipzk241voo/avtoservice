@@ -4,13 +4,6 @@ connect("mongodb://127.0.0.1:27017/avtoservice")
     .then(() => console.log("[Connect] MongoDB"));
 
 
-interface Car {
-    id: string;
-    brand: string;
-    year_of_manufacture: number;
-    owner_name: string;
-    price: number;
-}
 
 interface Mechanic {
     id: string;
@@ -28,22 +21,6 @@ interface Order {
     car_id: string;
     mechanic_id: string;
 }
-
-interface DelayedRepair {
-    car_brand: string;
-    mechanic_id: string;
-    delay_days: number;
-}
-
-const carModel = model<Car>("car",
-    new Schema<Car>({
-        id: String,
-        brand: String,
-        year_of_manufacture: Number,
-        owner_name: String,
-        price: Number
-    })
-);
 
 const mechanicSchema = new Schema<Mechanic>({
     id: String,
@@ -68,13 +45,30 @@ const orderModel = model<Order>("order",
     })
 );
 
-const delayReairModel = model<DelayedRepair>("delayed_repair",
-    new Schema({
-        car_brand: String,
-        mechanic_id: String,
-        delay_days: Number
-    })
-);
+
+function top_mech_category(work_category: string) {
+    return orderModel.aggregate([
+        { $match: { work_category: work_category } },
+        { $group: { _id: "$mechanic_id", job_count: { $sum: 1 } } },
+        { $sort: { job_count: -1 } },
+        { $limit: 1 },
+        {
+            $lookup: {
+                from: "mechanics",
+                localField: "_id",
+                foreignField: "id",
+                as: "mechanic"
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                mechanic_name: { $arrayElemAt: ["$mechanic.full_name", 0] },
+                jobs_completed: "$job_count"
+            }
+        }
+    ])
+}
 
 
 
@@ -96,119 +90,7 @@ const delayReairModel = model<DelayedRepair>("delayed_repair",
             console.log(`Бонус оновлено для механіка:`, mechanic.full_name);
         }
     })
+
+       const result = await top_mech_category("Ремонт двигуна");
+       console.log(result)
 })();
-    
-    
-    
-    //     function findLoyalClient() {
-    //         return orderModel.aggregate([
-    //             {
-    //                 $lookup: {
-    //                     from: "cars",
-    //                     localField: "car_id",
-    //                     foreignField: "id",
-    //                     as: "car"
-    //                 }
-    //             },
-    //             { $unwind: "$car" },
-    //             {
-    //                 $group: {
-    //                     _id: "$car.owner_name",
-    //                     unique_mechanics: { $addToSet: "$mechanic_id" }
-    //                 }
-    //             },
-    //             { $match: { "unique_mechanics.1": { $exists: false } } },
-    //             {
-    //                 $project: {
-    //                     owner_name: "$_id",
-    //                     mechanic_id: { $arrayElemAt: ["$unique_mechanics", 0] }
-    //                 }
-    //             },
-    //             {
-    //                 $lookup: {
-    //                     from: "mechanics",
-    //                     localField: "mechanic_id",
-    //                     foreignField: "id",
-    //                     as: "mechanic"
-    //                 }
-    //             },
-    //             {
-    //                 $project: {
-    //                     _id: 0,
-    //                     owner_name: 1,
-    //                     mechanic_name: { $arrayElemAt: ["$mechanic.full_name", 0] }
-    //                 }
-    //             }
-    //         ])
-    //     };
-    
-    //     const result = await findLoyalClient();
-    //     console.log(result);
-
-//     function top_mech_category(work_category: string) {
-//         return orderModel.aggregate([
-//             { $match: { work_category: work_category } },
-//             { $group: { _id: "$mechanic_id", job_count: { $sum: 1 } } },
-//             { $sort: { job_count: -1 } },
-//             { $limit: 1 },
-//             {
-//                 $lookup: {
-//                     from: "mechanics",
-//                     localField: "_id",
-//                     foreignField: "id",
-//                     as: "mechanic"
-//                 }
-//             },
-//             {
-//                 $project: {
-//                     _id: 0,
-//                     mechanic_name: { $arrayElemAt: ["$mechanic.full_name", 0] },
-//                     jobs_completed: "$job_count"
-//                 }
-//             }
-//         ])
-//     }
-
-//    const result = await top_mech_category("Ремонт двигуна");
-//    console.log(result)
-
-
-
-// const result = await orderModel.aggregate([
-//     {
-//         $lookup: {
-//             from: "cars",
-//             localField: "car_id",
-//             foreignField: "id",
-//             as: "car"
-//         }
-//     },
-//     { $unwind: "$car" },
-//     {
-//         $match: {
-//             "car.brand": "Mercedes-600",
-//             $expr: { $gt: ["$actual_completion_date", "$planned_completion_date"] }
-//         }
-//     },
-//     {
-//         $project: {
-//             _id: 0,
-//             car_brand: "$car.brand",
-//             mechanic_id: 1,
-//             delay_days: {
-//                 $dateDiff: {
-//                     startDate: "$planned_completion_date",
-//                     endDate: "$actual_completion_date",
-//                     unit: "day"
-//                 }
-//             }
-//         }
-//     }
-// ]);
-// console.log(result); /// Результат
-
-// await new delayReairModel(...result).save(); /// Збереження результату в іншій колекції
-
-// const check = await delayReairModel.find();
-
-// console.log(check) /// Демонстрація збереженого резлутату в колекції
