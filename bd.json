@@ -1,0 +1,24 @@
+{
+    "car": {
+        "id": "String",
+        "brand": "String",
+        "year_of_manufacture": "Number",
+        "owner_name": "String",
+        "price": "Number"
+    },
+    "orders": {
+        "id": "String", 
+        "issue_date": "Date",
+        "planned_completion_date": "Date",
+        "actual_completion_date": "Date",
+        "work_category": "String",
+        "car_id": "String",
+        "mechanic_id": "String"
+    },
+    "mechanics": {
+        "id": "String",
+        "full_name": "String",
+        "qualification_level": "Number",
+        "bonus": "Number"
+    }
+}
